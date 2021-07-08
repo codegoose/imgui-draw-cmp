@@ -11,6 +11,7 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_draw_cmp.h"
 
+// Return X/Y coords of the center point of the window.
 std::tuple<int, int> window_center(GLFWwindow *const window) {
     int x, y, w, h;
     glfwGetWindowPos(window, &x, &y);
@@ -18,6 +19,7 @@ std::tuple<int, int> window_center(GLFWwindow *const window) {
     return { x + (w / 2), y + (h / 2) };
 }
 
+// Get's the Hz refresh rate whatever monitor the window is (mostly) on.
 std::optional<int> window_display_hz(GLFWwindow *const window) {
     const auto [ cx, cy ] = window_center(window);
     int num_monitors;
@@ -42,6 +44,7 @@ std::optional<int> window_display_hz(GLFWwindow *const window) {
 
 int main() {
     glfwInit();
+    // ifbw/h -- initial framebuffer width/height
     const int ifbw = 1024, ifbh = 768;
     const auto window = glfwCreateWindow(ifbw, ifbh, "Bezier Test", nullptr, nullptr);
     glfwMakeContextCurrent(window);
@@ -51,6 +54,7 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
     ImDrawCmpCache draw_cache;
+    // rfbw/h -- recent framebuffer width/height
     int rfbw = ifbw, rfbh = ifbh;
     glfwSwapInterval(1);
     while (!glfwWindowShouldClose(window)) {
@@ -61,6 +65,7 @@ int main() {
         ImGui::NewFrame();
         ImGui::ShowDemoWindow();
         ImGui::Render();
+        // cfbw/h -- current framebuffer width/height
         const auto [ cfbw, cfbh ] = [&]() -> std::tuple<int, int> {
             int dw, dh;
             glfwGetFramebufferSize(window, &dw, &dh);
@@ -71,6 +76,8 @@ int main() {
         const bool fb_size_changed = (cfbw != rfbw || cfbh != rfbh);
         const bool need_redraw = fb_size_changed || draw_data_changed;
         if (!need_redraw) {
+            // Sleep for about a frame so we're not spinning the CPU.
+            // This avoids high CPU usage.
             std::this_thread::sleep_for(std::chrono::milliseconds(1000 / 60));
             continue;
         }
@@ -83,7 +90,7 @@ int main() {
         }
         glClearColor(.1, .1, .1, 1);
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(draw_data);
+        ImGui_ImplOpenGL3_RenderDrawData(draw_data); // Rendering actually occurs right here.
         glfwSwapBuffers(window);
     }
     return 0;
